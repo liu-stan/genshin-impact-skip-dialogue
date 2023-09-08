@@ -1,7 +1,6 @@
 # genshin-impact-skip-dialogue
-a tool to  skip genshin impact skip dialogue 
+a tool to  skip genshin impact dialogue 
 
-# Skip Genshin Impact Dialogue
 [English](docs/README.en.md)
 
 genshin-impact-skip-dialogue 是一个用于跳过原神游戏中的对话和剧情场景的工具。这个工具可以帮助自动点击对话、选择对话选项，拾取物品。基于opencv-pythond的图像识别，不支持对话加速功能。
