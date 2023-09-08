@@ -3,7 +3,7 @@ genshin-impact-skip-dialogue is a tool designed to skip dialogue and story scene
 
 ## Configuration Options
 
-pause shortcut keys `pause` , `alt+p`
+The game needs to be run in 1920x1080 windowed mode. The default pause shortcut keys is `pause` , `alt+p`.
 
 ```yaml
 # Tasks pause shortcut keys
