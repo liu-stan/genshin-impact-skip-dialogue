@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Crop and Edit</title>
+<style>
+  body {
+    width: 80%;
+  }
+  #image-container {
+    position: relative;
+  }
+  #crop-container {
+    position: relative;
+  }
+</style>
+</head>
+<body>
+<input type="file" id="image-input" accept="image/*">
+<div id="image-container">
+  <img id="source-image" alt="Selected Image" style="display: none;">
+  <canvas id="image-canvas" width="800"></canvas>
+</div>
+<div id="crop-container" style="margin-top: 10;">
+  <div>
+    <p id="crop-offset">
+
+    </p>
+    <button id="download-image">cropButton</button>
+    <a href=""></a>
+  </div>
+  <canvas id="crop-canvas"></canvas>
+</div>
+
+<script>
+  const imageInput = document.getElementById('image-input');
+  const sourceImage = document.getElementById('source-image');
+  const imageCanvas = document.getElementById('image-canvas');
+  const cropCanvas = document.getElementById('crop-canvas');
+  const imageContainer = document.getElementById('image-container');
+  const cropContainer = document.getElementById('crop-container');
+  const cropOffset = document.getElementById('crop-offset');
+  const cropButton = document.getElementById('download-image');
+
+  let isDragging = false;
+  let startX, startY, cropWidth, cropHeight;
+
+  imageInput.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        sourceImage.src = e.target.result;
+        sourceImage.onload = function() {
+          imageCanvas.width = sourceImage.width;
+          imageCanvas.height = sourceImage.height;
+          cropCanvas.width = sourceImage.width;
+          cropCanvas.height = sourceImage.height;
+          imageContainer.style.width = sourceImage.width + 'px';
+          imageContainer.style.height = sourceImage.height + 'px';
+          cropContainer.style.width = sourceImage.width + 'px';
+          cropContainer.style.height = sourceImage.height + 'px';
+          imageCanvas.getContext('2d').drawImage(sourceImage, 0, 0);
+          sourceImage.style.display = 'none';
+        };
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  imageCanvas.addEventListener('mousedown', function(e) {
+    isDragging = true;
+    startX = e.offsetX;
+    startY = e.offsetY;
+  });
+
+  imageCanvas.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    const ctx = imageCanvas.getContext('2d');
+    ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+    ctx.drawImage(sourceImage, 0, 0);
+    cropWidth = e.offsetX - startX;
+    cropHeight = e.offsetY - startY;
+    ctx.strokeStyle = 'red';
+    ctx.strokeRect(startX, startY, cropWidth, cropHeight);
+  });
+
+  imageCanvas.addEventListener('mouseup', function() {
+    isDragging = false;
+    cropctx = cropCanvas.getContext('2d')
+    cropCanvas.setAttribute('width', cropWidth)
+    cropCanvas.setAttribute('height', cropHeight)
+    cropctx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+    cropctx.drawImage(sourceImage, startX, startY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+    // Display the crop coordinates and dimensions
+    cropOffset.textContent  = `Crop Coordinates [${startX}, ${startY},]`
+    cropOffset.textContent  = cropOffset.textContent + ` Crop Dimensions [${cropWidth}, ${cropHeight}:`
+    cropOffset.textContent  = cropOffset.textContent +  `Crop Coordinates [${startX}, ${startY}, ${startX + cropWidth}, ${startY + cropHeight}]`
+  });
+
+  function cropAndSave() {
+      const croppedImageData = cropCanvas.toDataURL('image/jpeg');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = croppedImageData;
+      downloadLink.download = 'cropped_image.jpg';
+      downloadLink.click();
+    }
+  cropButton.addEventListener('click', cropAndSave);
+
+  // You can add a save button and use the toDataURL method to save the cropped image as JPEG
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+name: Generate Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with pyinstaller for Windows
+        run: pyinstaller --onefile gs-skip.py  #  运行pyinstaller
+
+      - name: Compress files
+        run: Compress-Archive -Path "dist/gs-skip.exe", "images/", "config.yaml" -DestinationPath "release.zip"
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
