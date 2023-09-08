@@ -23,10 +23,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build with pyinstaller for Windows
-        run: pyinstaller --onefile gs-skip.py  #  运行pyinstaller
+        run: pyinstaller --onefile gs_skip.py  #  run pyinstaller
 
       - name: Compress files
-        run: Compress-Archive -Path "dist/gs-skip.exe", "images/", "config.yaml" -DestinationPath "release.zip"
+        run: Compress-Archive -Path "dist/gs_skip.exe", "images/", "config.yaml" -DestinationPath "release.zip"
 
       - name: Create Release
         id: create_release
