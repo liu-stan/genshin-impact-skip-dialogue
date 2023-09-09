@@ -9,12 +9,12 @@ import cv2
 from loguru import logger
 
 
-WINDOWTITLE = ['Genshin Impact', '原神']
+WINDOWTITLE = ["Genshin Impact", "原神"]
 WINDOWBORDER = [0, 35]
 
 GetDC = ctypes.windll.user32.GetDC
 CreateCompatibleDC = ctypes.windll.gdi32.CreateCompatibleDC
-GetWindowRect  = ctypes.windll.user32.GetWindowRect 
+GetWindowRect = ctypes.windll.user32.GetWindowRect
 GetClientRect = ctypes.windll.user32.GetClientRect
 CreateCompatibleBitmap = ctypes.windll.gdi32.CreateCompatibleBitmap
 SelectObject = ctypes.windll.gdi32.SelectObject
@@ -27,6 +27,7 @@ GetWindowTextW = ctypes.windll.user32.GetWindowTextW
 GetWindowTextLengthW = ctypes.windll.user32.GetWindowTextLengthW
 
 ctypes.windll.user32.SetProcessDPIAware()
+SHAPE = (1920, 1080)
 
 
 def capture_window(handle: HWND):
@@ -42,9 +43,9 @@ def capture_window(handle: HWND):
     bitmap = CreateCompatibleBitmap(dc, width, height)
     SelectObject(cdc, bitmap)
     BitBlt(cdc, 0, 0, width, height, dc, 0, 0, SRCCOPY)
-    total_bytes = width*height*4
+    total_bytes = width * height * 4
     buffer = bytearray(total_bytes)
-    byte_array = c_ubyte*total_bytes
+    byte_array = c_ubyte * total_bytes
     GetBitmapBits(bitmap, total_bytes, byte_array.from_buffer(buffer))
     DeleteObject(bitmap)
     DeleteObject(cdc)
@@ -52,43 +53,56 @@ def capture_window(handle: HWND):
     # return numpy.ndarray
     return np.frombuffer(buffer, dtype=np.uint8).reshape(height, width, 4)
 
+
 def get_capture(handle: HWND):
     _ret = capture_window(handle)
-    cap = _ret[:, :,:3]
+    cap = _ret[:, :, :3]
     return cap
 
 
 def enum_win(hwnd, handle2win_titles):
-    if all((
-        windll.user32.IsWindow(hwnd), 
-        windll.user32.IsWindowEnabled(hwnd), 
-        windll.user32.IsWindowVisible(hwnd)
-    )):
-        handle2win_titles.update({ hwnd: windll.user32.GetWindowText(hwnd) })
+    if all(
+        (
+            windll.user32.IsWindow(hwnd),
+            windll.user32.IsWindowEnabled(hwnd),
+            windll.user32.IsWindowVisible(hwnd),
+        )
+    ):
+        handle2win_titles.update({hwnd: windll.user32.GetWindowText(hwnd)})
+
 
 def get_window_title(handle: HWND):
     length = GetWindowTextLengthW(handle)
     buff = ctypes.create_unicode_buffer(length)
     GetWindowTextW(handle, buff, length + 1)
-    window_title =  buff.value
+    window_title = buff.value
     return window_title
 
 
 def get_handle():
     handle = windll.user32.GetForegroundWindow()
     title = get_window_title(handle)
-    if title in  WINDOWTITLE:
+    if title in WINDOWTITLE:
         return handle
 
+
 def get_rect():
-    rect = RECT()
+    """
+    return crect, wrect
+    rect: left, top, right, bottom
+    """
     handle = get_handle()
-    GetWindowRect(handle, ctypes.byref(rect))
-    return rect
+    crect = RECT()
+    GetClientRect(handle, byref(crect))
+    wrect = RECT()
+    GetWindowRect(handle, ctypes.byref(wrect))
+    return crect, wrect
+
 
 def wait_secs(msg, secs):
-    logger.info(f'{msg} wait {secs} seconds.')
+    logger.info(f"{msg} wait {secs} seconds.")
     time.sleep(secs)
+
 
 def active(func):
     def wrapper(*args, **kwargs):
@@ -97,21 +111,24 @@ def active(func):
             result = func(*args, **kwargs)
             return result
         else:
-            wait_secs('window window not found ', 3.0)
+            wait_secs("window window not found ", 3.0)
+
     return wrapper
 
 
 def show(image, name=None):
     import random
+
     if isinstance(image, list):
         for i in image:
-            name = f'image-{random.random()}'
+            name = f"image-{random.random()}"
             cv2.imshow(name, i)
     else:
         cv2.imshow(name, image)
     cv2.waitKey()
 
-def crop(image, rect):
+
+def crop_image(image, rect):
     """
     rect: left, top, right, bottom
     """
@@ -120,48 +137,60 @@ def crop(image, rect):
 
 
 class Actions:
-
     @active
     def pres_key(self, key):
         pyautogui.press(key)
 
-    def pick_up(self, ):
-        self.pres_key('f')
+    def pick_up(
+        self,
+    ):
+        self.pres_key("f")
 
-    def skip_dialogue(self, ):
-        self.pres_key('space')
+    def skip_dialogue(
+        self,
+    ):
+        self.pres_key("space")
 
     def _mouse_position(self, position):
-        rect = get_rect()
+        crect, wrect = get_rect()
         border_left, border_top = WINDOWBORDER
-        x, y = rect.left + position[0] + border_left, rect.top + position[1] + border_top
+        cwidth, cheight = crect.right, crect.bottom
+        wwidth, wheight = wrect.right - wrect.left, wrect.bottom - wrect.top
+        if (cwidth, cheight) == (wwidth, wheight):
+            x, y = position[0] / SHAPE[0] * cwidth, position[1] / SHAPE[1] * cheight
+        else:
+            x, y = (
+                wrect.left + position[0] + border_left,
+                wrect.top + position[1] + border_top,
+            )
         return x, y
-    
+
     @active
     def move_and_click(self, position, delay=0.3):
         x, y = self._mouse_position(position)
         time.sleep(delay)
         pyautogui.moveTo(x, y)
         pyautogui.leftClick()
-    
+
     @active
     def move_to(self, position, delay=0.3):
         x, y = self._mouse_position(position)
         time.sleep(delay)
         pyautogui.moveTo(x, y)
 
+
 class ImageButton:
-    def __init__(self, filepath, crop_posi, threshold=0.9,  mask=None) -> None:
+    def __init__(self, filepath, crop_posi, threshold=0.9, mask=None) -> None:
         self._filepath = filepath
         self.image = cv2.imread(filepath)
         if mask:
-            self.mask = cv2.imread(filepath.replace('.jpg', '-mask.jpg'))
+            self.mask = cv2.imread(filepath.replace(".jpg", "-mask.jpg"))
         else:
             self.mask = None
-        self.threshold=threshold
+        self.threshold = threshold
         self.crop_posi = crop_posi
-        self.max_val = None
-        self.max_loc = None
+        self.max_val = 0
+        self.max_loc = [0, 0]
 
     def show(self):
         show(self.image)
@@ -169,38 +198,49 @@ class ImageButton:
     @property
     def click_position(self):
         if self.max_loc is None:
-            raise Exception('max_loc is None')
+            raise Exception("max_loc is None")
         left, top, _, _ = self.crop_posi
         return left + self.max_loc[0], top + self.max_loc[1]
 
     def __str__(self) -> str:
         return f'ImageButton(filepath="{self._filepath}")'
 
+
 class UI:
-    def __init__(self, ):
-        self.handle  = get_handle()
+    def __init__(
+        self,
+    ):
+        self.handle = get_handle()
         self.actions = Actions()
-        self._capture = get_capture(self.handle)
+        self._capture = self.new_capture()
         self._title = None
         self._chat_name = None
         self._crop = None
-    
+
     @property
     def capture(self):
         return self._capture
-    
-    def new_capture(self, delay: float = 0 ):
+
+    def new_capture(self, delay: float = 0):
         """
         sleep delay secs and return a new capture
         """
         time.sleep(delay)
-        self._capture = get_capture(self.handle)
+        capture = get_capture(self.handle)
+        if capture.shape[:2] == (0, 0):
+            return
+        elif capture.shape[:2] != SHAPE:
+            capture = cv2.resize(capture, SHAPE)
+        self._capture = capture
         return self._capture
+
+    def save_capture(self, crop=None):
+        cv2.imwrite("ui-capture.jpg", self._crop if crop is not None else self._capture)
 
     @property
     def chat_name(self):
         return self._chat_name
-    
+
     @chat_name.setter
     def chat_name(self, name):
         self._chat_name = name
@@ -208,20 +248,26 @@ class UI:
     @property
     def title(self):
         return self._title
-    
+
     @title.setter
     def title(self, title):
         self._title = title
 
     def show_capture(self):
-        show(self.capture, 'ui capture')
+        show(self.capture, "ui-capture")
 
-    def show_capture(self):
-        show(self._crop, 'ui crop')
+    def show_crop(self):
+        show(self._crop, "ui-crop")
 
     def crop(self, posi):
-        self._crop = crop(self._capture, posi)
+        self._crop = crop_image(self._capture, posi)
         return self._crop
+
+    def is_crop_zero(self, posi, thresh=128):
+        dialog = self.crop(posi)
+        gray = cv2.cvtColor(dialog, cv2.COLOR_BGR2GRAY)
+        _, thresh1 = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY)
+        return (thresh1 == 0).all()
 
     def match_button(self, image_button: ImageButton, method=cv2.TM_CCORR_NORMED):
         if image_button.crop_posi is not None:
@@ -235,9 +281,11 @@ class UI:
         image_button.max_val = max_val
         image_button.max_loc = max_loc
         return max_val >= image_button.threshold
-        
+
 
 if __name__ == "__main__":
+    time.sleep(3)
     ui = UI()
-    ui.new_capture(3)
+    ui.new_capture()
     ui.show_capture()
+    ui.save_capture()

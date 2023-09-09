@@ -8,7 +8,7 @@ genshin-impact-skip-dialogue 是一个用于跳过原神游戏中的对话和剧
 
 ## 配置文件选项
 
-需要以1920*1080窗口模式运行游戏， 默认暂停快捷键 `pause` , `alt+p`
+最好以1920*1080分辨率运行游戏，16:9分辨率也可以运行会更耗费cpu。 默认暂停快捷键 `pause` , `alt+p`
 
 ```yaml
 # tasks pause shortcut keys
